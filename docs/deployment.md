@@ -140,7 +140,7 @@ Use the [docker-compose.yml](../docker-compose.yml) at the root of the repo. Twe
 ```yaml
 services:
   vpn-manager:
-    build: .
+    image: ghcr.io/y4shin/vpn-manager:latest   # or pin a tag: :v1.2.3
     restart: unless-stopped
     cap_add: [NET_ADMIN]
     sysctls:
@@ -288,12 +288,21 @@ tar czf /backup/vpn-manager-$(date +%F).tgz -C /var/lib/vpn-manager .
 
 ### Upgrading
 
+If you pinned a version tag in `docker-compose.yml`, bump it and redeploy:
+
 ```sh
-cd /opt/vpn-manager
-git pull
-docker compose build
+docker compose pull
 docker compose up -d
 ```
+
+Or stay on `:latest` and just pull. Image tags published from this repo:
+
+| Tag                     | Built from                          | Notes                                            |
+|-------------------------|-------------------------------------|--------------------------------------------------|
+| `:latest`               | the most recent `vX.Y.Z` git tag    | Stable channel; recommended.                     |
+| `:vX.Y.Z`               | the matching git tag                | Pin this in production for reproducible rollouts.|
+| `:preview-latest`       | the most recent commit on `main`    | Tracks main; may break.                          |
+| `:preview-<shortsha>`   | a specific commit on `main`         | Useful for bisecting.                            |
 
 Schema migrations are applied automatically on start (idempotent `CREATE IF NOT EXISTS`). Server keys persist across rebuilds because they live in the bind-mounted data dir, not the image.
 
