@@ -6,8 +6,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/alexedwards/scs/v2"
 	gooidc "github.com/coreos/go-oidc/v3/oidc"
@@ -36,7 +38,7 @@ type Handler struct {
 }
 
 func New(ctx context.Context, cfg *config.Config, st *store.Store, sm *scs.SessionManager) (*Handler, error) {
-	provider, err := gooidc.NewProvider(ctx, cfg.OIDC.Issuer)
+	provider, err := discoverWithRetry(ctx, cfg.OIDC.Issuer, 30*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("oidc discovery: %w", err)
 	}
@@ -196,6 +198,34 @@ func extractGroups(claims map[string]any, claim string) []string {
 		return []string{x}
 	}
 	return nil
+}
+
+// discoverWithRetry tolerates a briefly-unavailable IdP (e.g. one that's
+// still booting alongside us in docker compose, or a fleeting blip in
+// production). Retries with exponential backoff until totalTimeout elapses.
+func discoverWithRetry(ctx context.Context, issuer string, totalTimeout time.Duration) (*gooidc.Provider, error) {
+	dctx, cancel := context.WithTimeout(ctx, totalTimeout)
+	defer cancel()
+
+	delay := 500 * time.Millisecond
+	for attempt := 1; ; attempt++ {
+		provider, err := gooidc.NewProvider(dctx, issuer)
+		if err == nil {
+			return provider, nil
+		}
+		if dctx.Err() != nil {
+			return nil, fmt.Errorf("after %d attempts: %w", attempt, err)
+		}
+		log.Printf("oidc discovery attempt %d failed: %v; retrying in %s", attempt, err, delay)
+		select {
+		case <-dctx.Done():
+			return nil, fmt.Errorf("after %d attempts: %w", attempt, err)
+		case <-time.After(delay):
+		}
+		if delay < 4*time.Second {
+			delay *= 2
+		}
+	}
 }
 
 func randToken(n int) string {
