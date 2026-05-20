@@ -25,7 +25,12 @@ func TestMain(m *testing.M) {
 
 	// Bring up the stack. --build to pick up any source changes.
 	if out, err := dcOpt("up", "-d", "--build", "--remove-orphans"); err != nil {
-		fmt.Fprintf(os.Stderr, "compose up failed: %v\n%s", err, out)
+		fmt.Fprintf(os.Stderr, "compose up failed: %v\n%s\n", err, out)
+		// Dump every service's logs so we can see *why* a container exited.
+		for _, svc := range []string{"vps", "mock-idp", "opnsense", "home-nas", "client-admin", "client-guest"} {
+			logs, _ := dcOpt("logs", "--no-color", "--tail=200", svc)
+			fmt.Fprintf(os.Stderr, "\n--- logs: %s ---\n%s\n", svc, logs)
+		}
 		_, _ = dcOpt("down", "-v")
 		os.Exit(2)
 	}
