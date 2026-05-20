@@ -1,0 +1,32 @@
+listen_addr: ":8080"
+public_url: "http://vps:8080"
+data_dir: "/var/lib/vpn-manager"
+
+oidc:
+  issuer: "http://mock-idp:8081"
+  client_id: "vpn-manager"
+  client_secret_env: "OIDC_CLIENT_SECRET"
+  groups_claim: "groups"
+  scopes: ["openid", "profile", "email", "groups"]
+
+wireguard:
+  users:
+    interface: wg-users
+    listen_port: 51820
+    address: "10.100.0.1/16"
+    endpoint: "vps:51820"
+    allowed_ips: ["192.168.1.0/24"]
+
+  home:
+    interface: wg-home
+    listen_port: 51821
+    address: "10.99.0.1/30"
+    peer:
+      public_key: "MuEUeeNXsUpDJmKpnM3tWfi2hG8taFYWY+QaT8Fx2Dg="
+      allowed_ips: ["10.99.0.2/32", "192.168.1.0/24"]
+
+groups:
+  admins: { cidr: "10.100.10.0/24" }
+  guests: { cidr: "10.100.30.0/24" }
+
+default_group: guests

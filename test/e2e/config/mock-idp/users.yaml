@@ -1,0 +1,11 @@
+client_id: "vpn-manager"
+client_secret: "test-secret"
+
+users:
+  - sub: "alice"
+    email: "alice@example.com"
+    groups: ["admins"]
+
+  - sub: "bob"
+    email: "bob@example.com"
+    groups: ["guests"]

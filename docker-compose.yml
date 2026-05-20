@@ -1,0 +1,22 @@
+services:
+  vpn-manager:
+    build: .
+    container_name: vpn-manager
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.src_valid_mark: "1"
+    ports:
+      - "51820:51820/udp"   # wg-users
+      - "51821:51821/udp"   # wg-home (OPNsense dials in)
+      - "127.0.0.1:8080:8080/tcp"  # behind a reverse proxy on the host
+    environment:
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
+    volumes:
+      - ./config.yaml:/etc/vpn-manager/config.yaml:ro
+      - vpn-data:/var/lib/vpn-manager
+
+volumes:
+  vpn-data:

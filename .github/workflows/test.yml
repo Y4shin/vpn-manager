@@ -1,0 +1,26 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v14
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - run: nix develop --command go vet ./...
+      - run: nix develop --command go test ./...
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v14
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - name: load wireguard kernel module
+        run: sudo modprobe wireguard
+      - run: nix develop --command go test -tags=e2e -v -timeout=15m ./test/e2e

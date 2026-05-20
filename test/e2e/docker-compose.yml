@@ -1,0 +1,121 @@
+name: vpn-manager-e2e
+
+networks:
+  internet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 203.0.113.0/24
+  homelan:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+
+services:
+  vps:
+    build:
+      context: ../..
+      dockerfile: test/e2e/images/vps/Dockerfile
+    container_name: vpne2e-vps
+    cap_add: [NET_ADMIN]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.src_valid_mark: "1"
+    environment:
+      OIDC_CLIENT_SECRET: test-secret
+    volumes:
+      - ./config/vps/config.yaml:/etc/vpn-manager/config.yaml:ro
+      - ./keys/vps-home.key:/var/lib/vpn-manager/wg-home.key:ro
+    networks:
+      internet:
+        ipv4_address: 203.0.113.10
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  mock-idp:
+    build:
+      context: ../..
+      dockerfile: cmd/mock-idp/Dockerfile
+    container_name: vpne2e-mock-idp
+    command:
+      - "--issuer=http://mock-idp:8081"
+      - "--listen=:8081"
+      - "--users-file=/etc/mock-idp/users.yaml"
+    volumes:
+      - ./config/mock-idp/users.yaml:/etc/mock-idp/users.yaml:ro
+    networks:
+      internet:
+        ipv4_address: 203.0.113.20
+
+  opnsense:
+    build:
+      context: ./images/opnsense
+    container_name: vpne2e-opnsense
+    cap_add: [NET_ADMIN]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.src_valid_mark: "1"
+    volumes:
+      - ./config/opnsense/wg0.conf:/etc/wireguard/wg0.conf.in:ro
+      - ./config/opnsense/nftables.conf:/etc/nftables.conf:ro
+    networks:
+      internet:
+        ipv4_address: 203.0.113.40
+      homelan:
+        ipv4_address: 192.168.1.254
+    depends_on:
+      vps:
+        condition: service_healthy
+
+  home-nas:
+    image: alpine:3.20
+    container_name: vpne2e-home-nas
+    cap_add: [NET_ADMIN]
+    # Replace the docker bridge default route with one pointing at opnsense
+    # so reply traffic to 10.100.x.x finds its way back through the WG tunnel.
+    command:
+      - sh
+      - -c
+      - |
+        ip route del default 2>/dev/null || true
+        ip route add 10.100.0.0/16 via 192.168.1.254
+        exec sleep infinity
+    networks:
+      homelan:
+        ipv4_address: 192.168.1.10
+
+  client-admin:
+    build:
+      context: ../..
+      dockerfile: test/e2e/images/client/Dockerfile
+    container_name: vpne2e-client-admin
+    cap_add: [NET_ADMIN]
+    sysctls:
+      net.ipv4.ip_forward: "0"
+      net.ipv4.conf.all.src_valid_mark: "1"
+    networks:
+      internet:
+        ipv4_address: 203.0.113.30
+    depends_on:
+      vps:
+        condition: service_healthy
+
+  client-guest:
+    build:
+      context: ../..
+      dockerfile: test/e2e/images/client/Dockerfile
+    container_name: vpne2e-client-guest
+    cap_add: [NET_ADMIN]
+    sysctls:
+      net.ipv4.ip_forward: "0"
+      net.ipv4.conf.all.src_valid_mark: "1"
+    networks:
+      internet:
+        ipv4_address: 203.0.113.31
+    depends_on:
+      vps:
+        condition: service_healthy

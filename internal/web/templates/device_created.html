@@ -1,0 +1,25 @@
+{{ define "title" }}{{ .Device.Name }} — vpn-manager{{ end }}
+{{ define "body" }}
+<section>
+  <h1>{{ .Device.Name }}</h1>
+  <p class="warn"><strong>Save this now.</strong> The private key won't be shown again — if you lose it, revoke the device and create a new one.</p>
+
+  <div class="grid">
+    <div>
+      <h2>Config file</h2>
+      <pre class="conf">{{ .Conf }}</pre>
+      <p>
+        <a class="button" download="{{ .Device.Name }}.conf"
+           href="data:application/octet-stream;base64,{{ .ConfB64 }}">Download {{ .Device.Name }}.conf</a>
+      </p>
+    </div>
+    <div>
+      <h2>QR code</h2>
+      <img src="{{ .QR }}" alt="WireGuard config QR" class="qr">
+      <p class="muted small">Scan with the WireGuard mobile app to import.</p>
+    </div>
+  </div>
+
+  <p><a href="/">Back to your devices</a></p>
+</section>
+{{ end }}

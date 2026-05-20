@@ -1,0 +1,9 @@
+/vpn-manager
+/result
+/result-*
+.direnv/
+.envrc.local
+*.test
+*.out
+/data/
+/dist/

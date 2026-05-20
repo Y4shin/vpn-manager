@@ -1,0 +1,53 @@
+{{ define "title" }}your devices — vpn-manager{{ end }}
+{{ define "body" }}
+<section>
+  <h1>Your devices</h1>
+  {{ if .Flash }}<p class="flash">{{ .Flash }}</p>{{ end }}
+
+  <p class="muted">
+    Group: <strong>{{ .Group }}</strong>
+    (subnet <code>{{ .GroupCIDR }}</code>).
+    {{ if .NoGroup }}<span class="warn">You aren't in any configured group — ask an admin.</span>{{ end }}
+  </p>
+
+  {{ if .Devices }}
+  <table>
+    <thead><tr><th>Name</th><th>IP</th><th>Created</th><th>Last seen</th><th></th></tr></thead>
+    <tbody>
+    {{ range .Devices }}
+      <tr>
+        <td>{{ .Name }}</td>
+        <td><code>{{ .IP }}</code></td>
+        <td>{{ .CreatedAt.Format "2006-01-02 15:04" }}</td>
+        <td>
+          {{ if .LastHandshakeAt }}{{ .LastHandshakeAt.Format "2006-01-02 15:04" }}{{ else }}—{{ end }}
+        </td>
+        <td>
+          <form method="post" action="/devices/{{ .ID }}/delete" class="inline"
+                onsubmit="return confirm('Revoke {{ .Name }}?');">
+            <button type="submit" class="danger">revoke</button>
+          </form>
+        </td>
+      </tr>
+    {{ end }}
+    </tbody>
+  </table>
+  {{ else }}
+  <p class="muted">No devices yet.</p>
+  {{ end }}
+
+  {{ if not .NoGroup }}
+  <h2>Add a device</h2>
+  <form method="post" action="/devices" class="stack">
+    <label>Device name
+      <input type="text" name="name" required maxlength="40" placeholder="laptop, phone, ...">
+    </label>
+    <button type="submit">Generate config</button>
+  </form>
+  <p class="muted small">
+    The private key is shown <strong>once</strong> on the next page and never stored.
+    Save the file or scan the QR before navigating away.
+  </p>
+  {{ end }}
+</section>
+{{ end }}

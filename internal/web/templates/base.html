@@ -1,0 +1,23 @@
+{{ define "base" }}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ block "title" . }}vpn-manager{{ end }}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">vpn-manager</a>
+    {{ if .User }}
+      <span class="who">{{ .User.Email }}</span>
+      <form method="post" action="/auth/logout" class="inline">
+        <button type="submit" class="link">log out</button>
+      </form>
+    {{ end }}
+  </header>
+  <main>
+    {{ block "body" . }}{{ end }}
+  </main>
+</body>
+</html>{{ end }}

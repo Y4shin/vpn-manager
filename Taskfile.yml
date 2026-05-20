@@ -1,0 +1,46 @@
+version: '3'
+
+vars:
+  GO: nix develop --command go
+
+tasks:
+  test:
+    desc: Unit + webflow integration tests (fast, no docker)
+    cmds:
+      - "{{.GO}} test ./..."
+
+  check:
+    desc: Vet + unit tests
+    cmds:
+      - "{{.GO}} vet ./..."
+      - "{{.GO}} test ./..."
+
+  test-e2e:
+    desc: Full docker-compose end-to-end suite (requires WG kmod on host)
+    cmds:
+      - "{{.GO}} test -tags=e2e -v -timeout=10m ./test/e2e"
+
+  test-e2e-keep:
+    desc: E2E suite, leaving the compose stack up for debugging
+    cmds:
+      - "{{.GO}} test -tags=e2e -v -timeout=10m ./test/e2e -keep"
+
+  test-all:
+    desc: check + test-e2e
+    deps: [check, test-e2e]
+
+  e2e-down:
+    desc: Tear down a leftover e2e compose stack (after test-e2e-keep)
+    dir: test/e2e
+    cmds:
+      - docker compose down -v
+
+  build:
+    desc: Build the production container image
+    cmds:
+      - docker build -t vpn-manager:dev .
+
+  fmt:
+    desc: Run go fmt
+    cmds:
+      - "{{.GO}} fmt ./..."
